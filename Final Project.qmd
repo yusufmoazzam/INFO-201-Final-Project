@@ -1,0 +1,240 @@
+---
+title: "Final Project"
+author: "Warsame Mahdi, Barron Howard, Yusuf Mozzam"
+format: 
+  html:
+    theme: cosmo
+    toc: true
+    embed-resources: true
+---
+
+# Introduction
+
+## Topical Overview
+
+Human trafficking is a global issue that affects communities in many different ways, and it’s often connected to broader patterns of crime and social vulnerability. According to the United Nation Office on Drugs and Crime, human trafficking involves the exploitation of people through force, fraud, and coercion and occurs in many forms, including forced labor and commercial sexual exploitation. While trafficking is often studied as a standalone issue, it may also be influenced by other social factors such as crime levels and population size. Understanding how trafficking relates to other crime patterns across the United States can help provide insight into where trafficking is more likely to occur and how it may interact with broader crime environments. More background on human trafficking can be found here: https://www.unodc.org/unodc/en/human-trafficking/what-is-human-trafficking.html
+
+This project focuses on three main research questions: How do the rates of either property or violent crimes correlate with the Human Trafficking rates in each state? How does population size affect the number of reported human trafficking cases around all states? Is there a relationship between violent crime rates and property crime rates across the U.S.? These questions allow us to examine different dimensions of crime across states and see whether human trafficking appears to follow similar patterns as other criminal activity. By analyzing these relationships, we hope to identify whether states with higher crime levels or larger populations tend to report higher numbers of trafficking cases. 
+
+To answer these questions, we combined two different datasets. The first dataset contains U.S. state crime statistics, including violent crime rates, property crime rates, and population estimates. This dataset is available through the CORGIS dataset collection and can be accessed here: https://corgis-edu.github.io/corgis/csv/state_crime/. The second dataset contains information on reported human trafficking incidents by law enforcement agencies across the United States between 2013 and 2019. This dataset was obtained from the Inter-University Consortium for Political and Social Research (ICPSR) data archive and is available here: https://www.openicpsr.org/openicpsr/project/117974/version/V3/view?path=/openicpsr/117974/fcr:versions/V3/human_trafficking_2013_2019_csv.zip&type=file/. After downloading the datasets, we filtered them to include the years 2015-2019 and merged them so that each observation represents a state in a given year. 
+
+Analyzing these relationships is important because it can help reveal patterns between human trafficking and other crime indicators across the United States. If trafficking tends to occur more frequently in states with higher crime rates or larger populations, this information could help researchers and policymakers better understand where prevention efforts may be most needed. However, there are also important limitations and ethical considerations when using these datasets. Human trafficking is widely believed to be underreported, meaning the number of cases likely underestimates the true scale of the problem. Additionally, reporting practices may vary between law enforcement agencies, which can affect the consistency of the data. Because of these limitations, our analysis should be interpreted as identifying patterns in reported cases rather than providing a complete measure of trafficking activity. 
+
+Providing Data Context
+
+Dataset 1: State Crime Rates
+
+Data Source: https://corgis-edu.github.io/corgis/csv/state_crime/
+
+Authors: Ryan Whitcomb, Joung Min Choi and Bo Guan
+
+Source: The data is from the Unified Crime Reporting Statistics and is a collaboration of the U.S. Department of Justice and the Federal Bureau of Investigation information crime statistics. This dataset ranges from the years 1960 to 2019. This data will be perfect for us to measure different crime rates in the US, but the earlier years from this dataset suffer from inaccuracies. This dataset consists of 3,115 rows and 21 columns.
+
+Dataset 2: FBI Uniform Crime Reporting (UCR) Program Data 2013-2019
+
+Data Source: https://www.openicpsr.org/openicpsr/project/117974/version/V3/view?path=/openicpsr/117974/fcr:versions/V3/human_trafficking_2013_2019_csv.zip&type=file
+
+Author: Jacob Kaplan
+
+Source: This is an FBI dataset, with much of its data being downloaded from the FBI's website. Its a part of the annual Uniform Crime Reporting or UCR program data. The data is from all 50 states in the US, even narrowing down to the county. It combines data from the years 2013 to 2019. This sample is the most accurate source we found for monthly human trafficking rates in the United States, but still lacks enough data due to Human Trafficking being severely under reported. This dataset consists of 162,635 rows and 37 columns.
+
+# Question 1
+### Setup 
+```{r}
+#| echo: false
+#| include: false
+library("shiny")
+library("tidyverse")
+library("scales")
+library("ggplot2")
+library("dplyr")
+library("stringr")
+library("scales")
+library("maps")
+state_summary_df <- read.csv("state_summary_df.csv")
+us_map <- ggplot2::map_data("state")
+map_df <- us_map |>
+  left_join(
+    state_summary_df |> select(state, avg_violent_crime_rate, avg_property_crime_rate, total_trafficking_cases),
+    by = c("region" = "state")
+  )
+centroids <- us_map |>
+  group_by(region) |>
+  summarize(long = mean(range(long)), lat = mean(range(lat)), .groups = "drop") %>%
+  left_join(
+    state_summary_df |> select(state, total_trafficking_cases),
+    by = c("region" = "state")
+  )
+
+
+```
+
+::: {.panel-tabset}
+
+### Violent Crime Rate
+```{r}
+
+metric <- "avg_violent_crime_rate"
+
+metric_label <- if (metric == "avg_violent_crime_rate") {
+  "Violent crime rate"
+} else {
+  "Property crime rate"
+}
+
+ggplot() +
+  geom_polygon(
+    data = map_df,
+    aes(long, lat, group = group, fill = .data[[metric]]),
+    color = "white", linewidth = 0.2
+  ) +
+  coord_fixed(1.3) +
+  geom_point(
+    data = centroids,
+    aes(long, lat, size = total_trafficking_cases),
+    color = "#1f77b4", alpha = 0.75, show.legend = TRUE
+  ) +
+  scale_fill_viridis_c(
+    option = "C", na.value = "grey85", labels = label_comma()
+  ) +
+  scale_size_continuous(
+    range = c(1.5, 12), breaks = c(0, 5, 10, 20, 50), name = "Human Trafficking cases"
+  ) +
+  labs(
+    title = paste("US States —", metric_label, "V.S. Human Trafficking Overlay"),
+    subtitle = "Fill: violent crime rate • Bubbles: total human trafficking cases",
+    fill = metric_label
+  ) +
+  theme_void(base_size = 12) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+```
+
+### Property Crime Rate
+```{r}
+metric <- "avg_property_crime_rate"
+
+metric_label <- if (metric == "avg_violent_crime_rate") {
+  "Violent crime rate"
+} else {
+  "Property crime rate"
+}
+
+ggplot() +
+  geom_polygon(
+    data = map_df,
+    aes(long, lat, group = group, fill = .data[[metric]]),
+    color = "white", linewidth = 0.2
+  ) +
+  coord_fixed(1.3) +
+  geom_point(
+    data = centroids,
+    aes(long, lat, size = total_trafficking_cases),
+    color = "#1f77b4", alpha = 0.75, show.legend = TRUE
+  ) +
+  scale_fill_viridis_c(
+    option = "C", na.value = "grey85", labels = label_comma()
+  ) +
+  scale_size_continuous(
+    range = c(1.5, 12), breaks = c(0, 5, 10, 20, 50), name = "Human Trafficking cases"
+  ) +
+  labs(
+    title = paste("US States —", metric_label, "V.S. Human Trafficking Overlay"),
+    subtitle = "Fill: property crime rate • Bubbles: total human trafficking cases",
+    fill = metric_label
+  ) +
+  theme_void(base_size = 12) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+
+```
+:::
+
+### Explanation:
+These are visualizations of how different how the crime rate correlates with the amount of human trafficking cases between the years 2015 and 2019. The size of the dots represent the amount of reported human trafficking cases in a state while the heat map is either the property or violent crime rates, which are measured as the average of the total number of reported offenses per 100,000 of the population in each state. The theory here was that the states with specifically the highest violent crime rates would have the highest amount of reported human trafficking cases. The reason I included a property crime rate to make sure that it was specifically violent crimes with that connection. It turns out, however, that there is no solid evidence from the maps supporting said hypothesis. Its extremely challenging to find data on human trafficking cases since it is so under reported and even the FBI dataset we found was mostly filled with 0 reported cases. Overall, while the graph is a solid visual for the property and violent crime rates in each state, the lack of human trafficking data makes it obsolete for answering the question.
+
+# Question 2
+
+```{r}
+state_crime_df = read.csv("state_crime.csv")
+
+
+ucr_df = read.csv("human_trafficking_yearly_2013_2019.csv")
+
+
+ucr_df = ucr_df %>% 
+  filter(year >= 2015, year <= 2019)
+
+
+
+state_crime_df = state_crime_df %>%
+    filter(Year >= 2015, Year <= 2019)
+
+state_crime_df$State = tolower(state_crime_df$State)
+state_crime_df = state_crime_df %>% 
+  rename(state = State)
+
+
+ht_df = full_join(
+  state_crime_df, 
+  ucr_df,
+  by = c("state" = "state",
+         "Year" = "year")
+              )
+population_df = ht_df %>%
+  group_by(state) %>%
+  summarize(
+    avg_population = mean(Data.Population, na.rm = TRUE),
+    total_trafficking_cases = sum(reported_total, na.rm = TRUE)
+  )
+
+library(ggplot2)
+ggplot(population_df, 
+       aes(x = avg_population, y = total_trafficking_cases,
+           color = total_trafficking_cases)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  scale_color_viridis_c() +
+  labs(
+    title = "Population Size vs Human Trafficking Cases by State (2015-2019)", 
+    x = "Average State Population",
+    y = "Total Reported Human Trafficking Cases",
+    color = "Trafficking Cases"
+  ) +
+  theme_minimal()
+```
+### Explanation:
+This visualization explores the relationship between state population size and the number of reported human trafficking cases between 2015 and 2019. Each point represents a state, where the x-axis shows the average population and the y-axis shows the total number of trafficking cases reported during the study period. In theory, the regression line helps illustrate the overall trend between these variables. If the points generally increase as population increases, it suggest that states with larger populations tend to report more trafficking cases. However, this does not necessarily mean that trafficking is more common in these states; larger populations may simply lead to more reported incidents. 
+** A large issue with this graph is that a vast majority of the states have 0 reported cases, tying back to the idea that human trafficking cases generally go unreported. So, while this graph is a good representation of population size effects on REPORTED cases, it does not tell the true story. 
+
+# Question 3
+
+```{r}
+state_summary_df = read.csv("state_summary_df.csv")
+
+ggplot(state_summary_df,
+       aes(x = avg_property_crime_rate, y = avg_violent_crime_rate)) +
+  geom_point(color = "blue", size = 3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  labs(
+    title = "Relationship Between Property Crime and Violent Crime Rates by State",
+    x = "Average Property Crime Rate",
+    y = "Average Violent Crime Rate"
+  ) +
+ theme_dark()
+
+```
+### Explanation:
+This visualization shows the relationship between property crime rates and violent crime rates across U.S. states. Each point represents a state, where the x-axis shows the average property crime rate and the y-axis shows the average violent crime rate. The upward trend in the line suggests that states with higher property crime rates often also have higher violent crime rates. This does not mean one type of crime causes the other, but it shows that the two types of crime may be related or influenced by similar conditions.
+
+# Conclusion
+
+This project explored how human trafficking relates to other crime patterns and population differences across U.S. states. One important takeaway from our analysis is that states with larger populations tend to report more human trafficking cases. This pattern makes sense because states with more people naturally have more crimes occur and be reported. However, population size alone does not fully explain trafficking patterns, and other social or economic factors may also play a role.
+
+Another key takeaway is the relationship between property crime and violent crime rates across states. Our visualization shows a positive relationship between the two, meaning that states with higher property crime rates often also have higher violent crime rates. This suggests that different types of crime may occur in similar environments or be influenced by similar conditions such as poverty or policing practices. 
+
+It is important to recognize that our analysis likely underestimates the true number of human trafficking cases. Human trafficking is widely believed to be underreported, and many victims may never be identified or reported to law enforcement. Because of this, the dataset only reflects reported incidents rather than the true scale of trafficking. Future research could explore additional data sources, such as nonprofit reports or victim support organizations, to better understand trafficking patterns and improve estimates of where trafficking may be occurring.
