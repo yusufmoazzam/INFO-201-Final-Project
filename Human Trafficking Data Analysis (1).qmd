@@ -1,0 +1,207 @@
+---
+title: "Human Trafficking Data Analysis"
+author: "by Warsame Mahdi, Barron Howard, and Yusuf Moazzam"
+format: html
+editor: visual
+---
+
+```{r}
+#| echo: false
+#| include: false
+
+library("tidyverse")
+```
+
+# Part I: Find the Data
+
+## Dataset 1: State Crime Rates
+
+Data Source: <https://corgis-edu.github.io/corgis/csv/state_crime/>
+
+Data Meaning: This data represents information on crime rates and total crimes across the United States of America from 1960 to 2019. Crimes have been split into two main categories: property and violent crimes.
+
+Data Join: We intend to join using state and year. A feature we need to change from the state column in this dataset is that the states start with an uppercase letter. We must use the toLower() function since joining is case-sensitive. Another issue is the years. Not only are the early years naturally less accurate data, the other dataset only starts at 2013. Therefore, we will make the year range 2013-2019.
+
+Data Observations: There are 3,115 rows and 21 columns. The relevant column names with example values are state ("Washington"), Year (2015), Population (2105856), Rates.Property.All (23632), Rates.Violent.All (204.6), Totals.Property.All (45246)), and Totals.Violent.All(15537).
+
+Data Issues: The only potential cause of unreliability is the accuracy of the early years of crime data, which we mitigate by deleting all rows before 2013
+
+## Dataset 2: FBI Uniform Crime Reporting (UCR) Program Data 2013-2019
+
+Data Source: <https://www.openicpsr.org/openicpsr/project/117974/version/V3/view?path=/openicpsr/117974/fcr:versions/V3/human_trafficking_2013_2019_csv.zip&type=file>
+
+Data Meaning: This is an FBI data set that is a part of the annual Uniform Crime Reporting. It contains information about human trafficking offenses in the United States. There are two main crime categories: Commercial sex acts and involuntary servitude.
+
+Data Join: We intend to join using state and year. This dataset will need no changes and the other dataset will conform to its year range and state casing.
+
+Data Observations: There are 162,635 rows and 37 columns. The relevant column names with example values are state ("washington"), year (2013), population (2105856), reported.commercial.sex.acts (2), reported.involuntary.serv (4) reported.total (6).
+
+Data Issues: The main problem with this data set is the fact that human trafficking is one of the most unreported crimes. The data is limited to what has been reported/what they have on file which means there are countless cases unaccounted for.
+
+# Part II: Data Join
+
+## Dataset 1: State Crime Rates
+
+```{r}
+state_crime_df = read.csv("state_crime.csv")
+glimpse(state_crime_df)
+```
+
+## Dataset 2: FBI Uniform Crime Reporting (UCR) Program Data 2013-2019
+
+```{r}
+ucr_df = read.csv("human_trafficking_yearly_2013_2019.csv")
+glimpse(ucr_df)
+```
+
+## Filtering Data to Years 2015-2019
+
+```{r}
+ucr_df = ucr_df %>% 
+  filter(year >= 2015, year <= 2019)
+glimpse(ucr_df)
+
+
+state_crime_df = state_crime_df %>%
+    filter(Year >= 2015, Year <= 2019)
+
+state_crime_df$State = tolower(state_crime_df$State)
+state_crime_df = state_crime_df %>% 
+  rename(state = State)
+glimpse(state_crime_df)
+
+```
+
+## Joining Data
+
+```{r}
+ht_df = full_join(
+  state_crime_df, 
+  ucr_df,
+  by = c("state" = "state",
+         "Year" = "year")
+              )
+glimpse(ht_df)
+```
+
+-   filtered by year so we only include data from 2015-2019
+-   lowercased State column/values in states_crime_df to match ucr_df
+
+# Part III: Data Documentation
+
+##Codebook ##State Crime Rates dataset: We downloaded this CSV file from GitHub, where it was used in another project. But the original dataset comes from the CORGIS project, which gathers real crime data from U.S. government sources. The information on the dataset can be found on this website, which explains the columns and variables: https://corgisedu.github.io/corgis/csv/state_crime/
+
+##FBI Human Trafficking dataset: This describes how the FBI's Uniform Crime Reporting (UCR) data is collected and explains the variables that represent human trafficking (reported, actual, unfounded, and cleared counts). Information about the dataset is provided on the OpenICPSR page: https://www.openicpsr.org/openicpsr/project/117974/version/V3/view?path=/openicpsr/117974/fcr:versions/V3/human_trafficking_2013_2019_csv.zip&type=file
+
+## Most Relevant Variables
+
+-   state: used to join datasets and compare by location
+-   Year: used to join datasets and analyze trends
+-   Data.Population: helps tell about the size of each state
+-   Data.Rates.Property.All: overall property crime rates
+-   reported_total: number of reported cases
+-   actual_total: number of comfirmed cases These variables are important becasue the allow us to compare overall crime reports and population levels with human trafficking reports.
+
+# Part IV:
+
+## Removing Columns
+
+### UCR df
+
+```{r}
+ucr_clean_df = ucr_df %>%
+  select(
+    agency_name,
+    state,
+    year,
+    number_of_months_reported,
+    month_reported_indicator,
+    agency_type,
+    population,
+    actual_commercial_sex_acts,
+    actual_involuntary_serv,
+    actual_total,
+    tot_clr_commercial_sex_acts,
+    tot_clr_involuntary_serv,
+    tot_clr_total,
+    clr_18_commercial_sex_acts,
+    clr_18_involuntary_serv,
+    clr_18_total,
+    unfound_commercial_sex_acts,
+    unfound_involuntary_serv,
+    unfound_total,
+    reported_commercial_sex_acts,
+    reported_involuntary_serv,
+    reported_total
+  )
+
+glimpse(ucr_clean_df)
+```
+
+This code removed any columns we deemed unneccessary for our analysis. Also, since the datasets are extremely large, RStudio cannot run everything, so it was beneficial to leave out columns anyways.
+
+### State Crime df
+
+```{r}
+state_crime_clean_df = 
+  state_crime_df %>%
+  select(
+    state,
+    Year,
+    Data.Population,
+    Data.Rates.Property.All,
+    Data.Rates.Violent.All,
+    Data.Totals.Property.All,
+    Data.Totals.Violent.All
+  )
+```
+
+This code removed any columns we deemed unneccessary for our analysis. Also, since the datasets are extremely large, RStudio cannot run everything, so it was beneficial to leave out columns anyways.
+
+## Cleaning up Rows
+
+```{r}
+ht_df = ht_df %>%
+    distinct(state, Year, .keep_all = TRUE)
+```
+
+This code removes duplicated rows from the dataset on the combination of state and year. This was written so that each state appears only once per year in the dataset, allowing for a more accurate analysis.
+
+## Summary df
+
+```{r}
+state_summary_df = ht_df %>% 
+  group_by(state) %>% 
+  summarize(
+    avg_violent_crime_rate = 
+      mean(Data.Rates.Violent.All, na.rm = TRUE),
+    avg_property_crime_rate = 
+      mean(Data.Rates.Property.All, na.rm = TRUE),
+    total_trafficking_cases = sum(reported_total, na.rm = TRUE),
+    avg_population = mean(Data.Population, na.rm = TRUE)
+  )
+```
+
+This code creates a summary dataframe where each row represents one state across 2013-2019. We grouped the data by state and calculated the average violent/property crime rates to show typical crime levels over time. Trafficking cases were summed since they are counts, giving the total numbers of incidents in each state. The average population is also included so we can later calculate population adjusted rates for better comparisons.
+
+# Group Information
+
+## About:
+
+Main topic: What makes an area high risk for Human Trafficking and for whom? Lab Section: BA 12:30 - 1:30 PM TA: Yashita Tanwar
+
+## Group Members:
+
+Warsame Mahdi (The Information School, University of Washington; wmmahdi\@uw.edu) is interested in human centered software design and analysis.
+
+Yusuf Moazzam (The Information School, University of Washington; ymoazzam\@uw.edu) is interested in healthcare and data analytics in immunology.
+
+Barron Howard (The Information School, University of Washington; barronh\@uw.edu) is interested in data analysis and the social impact of technology.
+
+## Coding Notes:
+
+Not completely sure if these are functions/arguments we haven't used in class, but we did use tolower(), distinct(), and .keep_all = TRUE in our code.
+
+tolower() converts all the text in a column to lowercase. I used this because in one dataset, the state names were capitalized, but they weren't in the other dataset, so I lowercased everything. I found this function by looking at examples in R Documentation link: https://www.rdocumentation.org/packages/h2o/versions/2.8.4.4/topics/tolower
+
+distinct function is from the dplyr library and it's used to remove duplicate rows from datasets. I used it to make sure there were no repeated values in our data. I learned how to use it and the .keep_all = TRUE argument, which keeps all the columns when removing duplicated, from the tidyverse documentation. link: https://dplyr.tidyverse.org/reference/distinct.html
