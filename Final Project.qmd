@@ -2,9 +2,10 @@
 title: "Final Project"
 author: "Warsame Mahdi, Barron Howard, Yusuf Mozzam"
 format: 
-  dashboard:
-    theme: cyborg
-editor: visual
+  html:
+    theme: cosmo
+    toc: true
+    embed-resources: true
 ---
 
 # Introduction
@@ -212,3 +213,4 @@ This project explored how human trafficking relates to other crime patterns and 
 Another key takeaway is the relationship between property crime and violent crime rates across states. Our visualization shows a positive relationship between the two, meaning that states with higher property crime rates often also have higher violent crime rates. This suggests that different types of crime may occur in similar environments or be influenced by similar conditions such as poverty or policing practices. 
 
 It is important to recognize that our analysis likely underestimates the true number of human trafficking cases. Human trafficking is widely believed to be underreported, and many victims may never be identified or reported to law enforcement. Because of this, the dataset only reflects reported incidents rather than the true scale of trafficking. Future research could explore additional data sources, such as nonprofit reports or victim support organizations, to better understand trafficking patterns and improve estimates of where trafficking may be occurring.
+
